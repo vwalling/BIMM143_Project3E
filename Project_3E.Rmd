@@ -1,0 +1,168 @@
+---
+title: "scFV-16 Sequence Alignment"
+output: html_notebook
+---
+________________________________________________________________________________
+_____
+Scientific Question: Does an isolated gene sequence from a single colony of BL21 
+(DE3) contain the expression system, pSANG or pBAD recombinant plasmid, with 
+the gene construct (scFV-16) and does the gene construct contain mutations? 
+  
+The competent cells BL21 (DE3) were used for the expression of both systems. 
+The pSANG system is under the control of a T7 promoter while the pBAD system is
+under the control of the araBAD operon. The protein being expressed is a 
+recombinant antibody fragment or, single-chain variable fragment (scFVs), that 
+was developed and selected for using phage display and biochemical assays 
+(ELISAs). In this case we are analyzing the gene construct scFV-16 that should 
+interact with the spike protein of SARS-CoV-2. 
+________________________________________________________________________________
+_____
+Scientific Hypothesis: If the colony was selected for and picked from an 
+antibiotic selective plate, then it should contain the vector (pBAD or pSANG)
+as the plasmids contain an anitbiotic resistance gene (Ampicillin or Kanamycin). 
+
+For this project, multiple sequence alignment and pairwise sequence alignment 
+was performed and a heatmap was created from the scoring matrix of the pairwise
+sequence alignment. A multiple sequence alignment was first performed as a means
+to visualize the alignment. Then a pairwise sequence alignment was performed 
+and a heatmap was generated from the similarities of the sequences from the 
+pairwise alignment. The purpose of the pairwise and the heatmap are to visualize
+the sequence alignment with more detail to answer the scientific question being 
+asked, is gene_16 present and are there mutations? 
+________________________________________________________________________________
+_____
+The following is a list and description of the packages needed to perform the 
+analysis: 
+
+1. BioConductor: provides many packages that are used for data analysis and 
+manipulation of biological data. 
+2. DECIPHER: a package from BioConductor that contains many different functions 
+that are helpful for sequence alignments and other applications.
+3. BioStrings: a package used for managing and manipulating biological strings, 
+in this case the DNA sequences. 
+
+#Installing the packages BioConductor, DECIPHER, and BioStrings
+```{r}
+install.packages("BiocManager")
+BiocManager::install("DECIPHER")
+BiocManager::install("BioStrings")
+
+```
+
+#Loading the packages to the console
+```{r}
+library(BiocManager)
+library(DECIPHER)
+library(Biostrings)
+```
+
+________________________________________________________________________________
+_____
+The following code is responsible for loading in the .fasta file that contains 
+the isolated gene 16 sequences from the plasmids (pBAD and pSANG) and the gene 
+construct (scFV-16) that the isolated genes will be compared to. 
+
+#Loading .fasta files
+```{r}
+dna_seq <- "/Users/toriwalling/Desktop/isolated_genes.fasta"
+unaligned_seqs <- readDNAStringSet(dna_seq)
+unaligned_seqs
+```
+
+The following code aligns the translated sequences and then the DNA sequences. 
+The aligned sequences will then be written to a .fasta file. The method used is 
+Multiple Sequence Alignment (MSA). MSA is a bioinformatics tool that aligns 
+genetic material (protein, DNA, RNA) and outputs information that can be used 
+to observe patterns and characteristics of the material. MSA is performed by 
+first translating the DNA sequences to the amino acid sequence, aligning this 
+sequence, and then translating the sequence back into DNA. This is done to 
+maintain the reading frame of the sequence. By first aligning the amino acid 
+sequences we get a better outcome from alignment because we are using a 
+protein coding sequence. 
+
+#Visualizing and performing a multiple sequence alignment
+```{r}
+#Aligning and visualizing the translated sequences as amino acids
+t_align <- AlignTranslation(unaligned_seqs, type="AAStringSet")
+BrowseSeqs(t_align)
+
+#Aligning and visualizing the DNA sequences as nucleotides
+d_align <- AlignSeqs(unaligned_seqs)
+BrowseSeqs(d_align)
+
+#Aligning and visualizing the translated sequences as nucleotides
+rt_align <- AlignTranslation(unaligned_seqs)
+BrowseSeqs(rt_align)
+
+#Writing the aligned sequences to a .fasta file
+writeXStringSet(rt_align, file= "Aligned_Gene16.fasta")
+```
+
+Below, I will create a nested looping index that will hold the scoring values 
+for the heatmap matrix. In this example, a heatmap is a data visualization 
+technique that uses different colors to represent different magnitudes of 
+similarity of numerical values in a matrix. Here, the heatmap is using a scoring 
+matrix from the pairwise alignment and showing the similarities between the 
+sequences. I first created an empty matrix that the scoring values from the 
+pairwise alignment will be recorded in. Then I defined the sequence variables 
+and turned them into character stings for the pairwise. The pairwise was 
+performed and a heatmap was created, heatmapm.
+
+```{r}
+#Defining a vector containing XX to loop over. 
+x <- c(1, 2, 3)
+
+#Creating an empty matrix, heatmapm, to contain the pairwise alignment
+heatmapm <- matrix(nrow=length(x), ncol=length(x))
+
+#Creating the nested for looping index to insert data into the matrix 
+for(i in x) {
+  for(j in x) {
+    
+    #Defining the sequence variables 
+    string1 <- unaligned_seqs[i]
+    string2 <- unaligned_seqs[j]
+    
+    #Turning the string1 variable into a character string 
+    ss1c = DNAStringSetList(string1)
+    as.character(unlist(ss1c))
+    cl1 = as(ss1c, "CharacterList")
+    as.list(cl1)
+    
+    #Turning the string2 variable into a character string 
+    ss2c = DNAStringSetList(string2)
+    as.character(unlist(ss2c))
+    cl2 = as(ss2c, "CharacterList")
+    as.list(cl2)
+    
+    #Performing a pairwise sequence alignment on the two character strings 
+    parseq <- pairwiseAlignment(pattern = c(cl2), subject = c(cl1))
+    
+    #Assigning the pairwise score to the matrix
+    heatmapm [i,j] <- score(parseq)
+  }
+}
+
+```
+
+Below is the print out of the matrix and heatmap generated. 
+
+#Print the values in the matrix heatmapm 
+```{r}
+heatmapm
+```
+
+#Create a heatmap from the matrix heatmapm
+```{r}
+heatmap(heatmapm)
+```
+
+Sequence 1 is the original gene 16, sequence 2 is gene 16 isolated from pSANG, 
+and sequence 3 is gene 16 isolated from pBAD. Based on the heatmap, gene 16
+isolated from pSANG and pBAD are more similar to one another than to the 
+original gene 16. On the heatmap, darker shades of red show a positive 
+association between the sequences. So the darker they are, the more similar 
+the sequences. Therefore, the isolated gene 16 sequences are present but 
+SNPs are present, as seen in the MSA, or there needs to be further clean up of 
+the sequences as they are more similar to each other (could have remainder of 
+primer sequences) rather than the original. 
